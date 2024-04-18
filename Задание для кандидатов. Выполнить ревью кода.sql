@@ -8,16 +8,16 @@ begin
 
 -- Проверка на корректность загрузки
 	if not exists (
-	select 1
-	from syn.ImportFile as f
-	where f.ID = @ID_Record
-		and f.FlagLoaded = cast(1 as bit)
+		select 1
+		from syn.ImportFile as imf
+		where imf.ID = @ID_Record
+			and imf.FlagLoaded = cast(1 as bit)
 	)
-		begin
-			set @ErrorMessage = 'Ошибка при загрузке файла, проверьте корректность данных'
-			raiserror(@ErrorMessage, 3, 1)
-			return
-		end
+	begin
+		set @ErrorMessage = 'Ошибка при загрузке файла, проверьте корректность данных'
+		raiserror(@ErrorMessage, 3, 1)
+		return
+	end
 
 	-- Чтение из слоя временных данных
 	select
@@ -51,7 +51,7 @@ begin
 			when cst.ID is null then 'Тип клиента отсутствует в справочнике "Тип клиента"'
 			when try_cast(cs.DateBegin as date) is null then 'Невозможно определить Дату начала'
 			when try_cast(cs.DateEnd as date) is null then 'Невозможно определить Дату окончания'
-			when try_cast(isnull(cs.FlagActive, 0) as bit) is null then 'Невозможно определить Активность'
+			when try_cast(cs.FlagActive as bit) is null then 'Невозможно определить Активность'
 		end as Reason
 	into #BadInsertedRows
 	from syn.SA_CustomerSeasonal as cs
@@ -108,7 +108,7 @@ begin
 			,bir.UID_DS_CustomerDistributor as 'UID Дистрибьютора'
 			,bir.CustomerDistributor as 'Дистрибьютор'
 			,isnull(format(try_cast(bir.DateBegin as date), 'dd.MM.yyyy', 'ru-RU'), bir.DateBegin) as 'Дата начала'
-			,isnull(format(try_cast(birDateEnd as date), 'dd.MM.yyyy', 'ru-RU'), bir.DateEnd) as 'Дата окончания'
+			,isnull(format(try_cast(bir.DateEnd as date), 'dd.MM.yyyy', 'ru-RU'), bir.DateEnd) as 'Дата окончания'
 			,bir.FlagActive as 'Активность'
 			,bir.Reason as 'Причина'
 		from #BadInsertedRows as bir

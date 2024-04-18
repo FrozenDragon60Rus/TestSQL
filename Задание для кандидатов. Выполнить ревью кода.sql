@@ -29,7 +29,7 @@ begin
 		,c_dist.ID as ID_dbo_CustomerDistributor
 		,cast(isnull(cs.FlagActive, 0) as bit) as FlagActive
 	into #CustomerSeasonal
-	from syn.SA_CustomerSeasonal cs
+	from syn.SA_CustomerSeasonal as cs
 		join dbo.Customer as c on c.UID_DS = cs.UID_DS_Customer
 			and c.ID_mapping_DataSource = 1
 		join dbo.Season as s on s.Name = cs.Season
@@ -51,7 +51,7 @@ begin
 			when cst.ID is null then 'Тип клиента отсутствует в справочнике "Тип клиента"'
 			when try_cast(cs.DateBegin as date) is null then 'Невозможно определить Дату начала'
 			when try_cast(cs.DateEnd as date) is null then 'Невозможно определить Дату окончания'
-			when try_cast(cs.FlagActive as bit) is null then 'Невозможно определить Активность'
+			when try_cast(isnull(cs.FlagActive, 0) as bit) is null then 'Невозможно определить Активность'
 		end as Reason
 	into #BadInsertedRows
 	from syn.SA_CustomerSeasonal as cs

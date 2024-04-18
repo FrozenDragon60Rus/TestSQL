@@ -6,7 +6,7 @@ begin
 	declare @RowCount int = (select count(*) from syn.SA_CustomerSeasonal)
 	declare @ErrorMessage varchar(max)
 
--- Проверка на корректность загрузки
+	-- Проверка на корректность загрузки
 	if not exists (
 		select 1
 		from syn.ImportFile as imf
@@ -30,36 +30,46 @@ begin
 		,cast(isnull(cs.FlagActive, 0) as bit) as FlagActive
 	into #CustomerSeasonal
 	from syn.SA_CustomerSeasonal as cs
-		join dbo.Customer as c on c.UID_DS = cs.UID_DS_Customer
+		inner join dbo.Customer as c on c.UID_DS = cs.UID_DS_Customer
 			and c.ID_mapping_DataSource = 1
-		join dbo.Season as s on s.Name = cs.Season
-		join dbo.Customer as c_dist on c_dist.UID_DS = cs.UID_DS_CustomerDistributor
+		inner join dbo.Season as s on s.Name = cs.Season
+		inner join dbo.Customer as c_dist on c_dist.UID_DS = cs.UID_DS_CustomerDistributor
 			and c_dist.ID_mapping_DataSource = 1
-		join syn.CustomerSystemType as cst on cs.CustomerSystemType = cst.Name
+		inner join syn.CustomerSystemType as cst on cs.CustomerSystemType = cst.Name
 	where try_cast(cs.DateBegin as date) is not null
 		and try_cast(cs.DateEnd as date) is not null
 		and try_cast(isnull(cs.FlagActive, 0) as bit) is not null
 
-	-- Определяем некорректные записи
-	-- Добавляем причину, по которой запись считается некорректной
+	/*
+	Определяем некорректные записи
+	Добавляем причину, по которой запись считается некорректной
+	*/
 	select
 		cs.*
 		,case
-			when c.ID is null then 'UID клиента отсутствует в справочнике "Клиент"'
-			when c_dist.ID is null then 'UID дистрибьютора отсутствует в справочнике "Клиент"'
-			when s.ID is null then 'Сезон отсутствует в справочнике "Сезон"'
-			when cst.ID is null then 'Тип клиента отсутствует в справочнике "Тип клиента"'
-			when try_cast(cs.DateBegin as date) is null then 'Невозможно определить Дату начала'
-			when try_cast(cs.DateEnd as date) is null then 'Невозможно определить Дату окончания'
-			when try_cast(isnull(cs.FlagActive, 0) as bit) is null then 'Невозможно определить Активность'
+			when c.ID is null 
+				then 'UID клиента отсутствует в справочнике "Клиент"'
+			when c_dist.ID is null 
+				then 'UID дистрибьютора отсутствует в справочнике "Клиент"'
+			when s.ID is null 
+				then 'Сезон отсутствует в справочнике "Сезон"'
+			when cst.ID is null 
+				then 'Тип клиента отсутствует в справочнике "Тип клиента"'
+			when try_cast(cs.DateBegin as date) is null 
+				then 'Невозможно определить Дату начала'
+			when try_cast(cs.DateEnd as date) is null 
+				then 'Невозможно определить Дату окончания'
+			when try_cast(isnull(cs.FlagActive, 0) as bit) is null 
+				then 'Невозможно определить Активность'
 		end as Reason
 	into #BadInsertedRows
 	from syn.SA_CustomerSeasonal as cs
-	left join dbo.Customer as c on c.UID_DS = cs.UID_DS_Customer
-		and c.ID_mapping_DataSource = 1
-	left join dbo.Customer as c_dist on c_dist.UID_DS = cs.UID_DS_CustomerDistributor and c_dist.ID_mapping_DataSource = 1
-	left join dbo.Season as s on s.Name = cs.Season
-	left join syn.CustomerSystemType as cst on cst.Name = cs.CustomerSystemType
+		left join dbo.Customer as c on c.UID_DS = cs.UID_DS_Customer
+			and c.ID_mapping_DataSource = 1
+		left join dbo.Customer as c_dist on c_dist.UID_DS = cs.UID_DS_CustomerDistributor 
+			and c_dist.ID_mapping_DataSource = 1
+		left join dbo.Season as s on s.Name = cs.Season
+		left join syn.CustomerSystemType as cst on cst.Name = cs.CustomerSystemType
 	where c.ID is null
 		or c_dist.ID is null
 		or s.ID is null
@@ -69,7 +79,7 @@ begin
 		or try_cast(isnull(cs.FlagActive, 0) as bit) is null
 
 	-- Обработка данных из файла
-	merge into syn.CustomerSeasonal as cs
+	merge syn.CustomerSeasonal as cs
 	using (
 		select
 			cs_temp.ID_dbo_Customer
@@ -86,7 +96,8 @@ begin
 	when matched
 		and t.ID_CustomerSystemType <> s.ID_CustomerSystemType then
 		update
-		set ID_CustomerSystemType = s.ID_CustomerSystemType
+		set 
+			ID_CustomerSystemType = s.ID_CustomerSystemType
 			,DateEnd = s.DateEnd
 			,ID_dbo_CustomerDistributor = s.ID_dbo_CustomerDistributor
 			,FlagActive = s.FlagActive
@@ -99,7 +110,7 @@ begin
 		select @ErrorMessage = concat('Обработано строк: ', @RowCount)
 		raiserror(@ErrorMessage, 1, 1)
 
-		--Формирование таблицы для отчетности
+		-- Формирование таблицы для отчетности
 		select top 100
 			bir.Season as 'Сезон'
 			,bir.UID_DS_Customer as 'UID Клиента'

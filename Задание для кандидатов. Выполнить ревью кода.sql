@@ -92,9 +92,9 @@ begin
 			,cs_temp.ID_dbo_CustomerDistributor
 			,cs_temp.FlagActive
 		from #CustomerSeasonal as cs_temp
-	) as s on s.ID_dbo_Customer = cs.ID_dbo_Customer
-		and s.ID_Season = cs.ID_Season
-		and s.DateBegin = cs.DateBegin
+	) as s on s.ID_dbo_Customer = t.ID_dbo_Customer
+		and s.ID_Season = t.ID_Season
+		and s.DateBegin = t.DateBegin
 	when matched
 		and t.ID_CustomerSystemType <> s.ID_CustomerSystemType then
 		update

@@ -1,10 +1,12 @@
-create procedure syn.usp_ImportFileCustomerSeasonal
+create or alter procedure syn.usp_ImportFileCustomerSeasonal
 	@ID_Record int
-AS
-set nocount on
+as
 begin
-	declare @RowCount int = (select count(*) from syn.SA_CustomerSeasonal)
-	declare @ErrorMessage varchar(max)
+	set nocount on
+
+	declare 
+		@RowCount int = (select count(*) from syn.SA_CustomerSeasonal)
+		,@ErrorMessage varchar(max)
 
 	-- Проверка на корректность загрузки
 	if not exists (
@@ -35,7 +37,7 @@ begin
 		inner join dbo.Season as s on s.Name = cs.Season
 		inner join dbo.Customer as c_dist on c_dist.UID_DS = cs.UID_DS_CustomerDistributor
 			and c_dist.ID_mapping_DataSource = 1
-		inner join syn.CustomerSystemType as cst on cs.CustomerSystemType = cst.Name
+		inner join syn.CustomerSystemType as cst on cst.Name = cs.CustomerSystemType
 	where try_cast(cs.DateBegin as date) is not null
 		and try_cast(cs.DateEnd as date) is not null
 		and try_cast(isnull(cs.FlagActive, 0) as bit) is not null
@@ -79,7 +81,7 @@ begin
 		or try_cast(isnull(cs.FlagActive, 0) as bit) is null
 
 	-- Обработка данных из файла
-	merge syn.CustomerSeasonal as cs
+	merge syn.CustomerSeasonal as t
 	using (
 		select
 			cs_temp.ID_dbo_Customer
@@ -96,7 +98,7 @@ begin
 	when matched
 		and t.ID_CustomerSystemType <> s.ID_CustomerSystemType then
 		update
-		set 
+		set
 			ID_CustomerSystemType = s.ID_CustomerSystemType
 			,DateEnd = s.DateEnd
 			,ID_dbo_CustomerDistributor = s.ID_dbo_CustomerDistributor
@@ -126,4 +128,6 @@ begin
 
 		return
 	end
+
+	set nocount off
 end
